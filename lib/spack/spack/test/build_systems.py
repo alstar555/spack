@@ -5,15 +5,13 @@
 import glob
 import os
 
+import _vendoring.archspec.cpu
 import py.path
 import pytest
 
-import archspec.cpu
-
 import llnl.util.filesystem as fs
 
-import spack.build_systems.autotools
-import spack.build_systems.cmake
+import spack
 import spack.builder
 import spack.concretize
 import spack.environment
@@ -27,6 +25,8 @@ from spack.spec import Spec
 from spack.util.executable import which
 
 DATA_PATH = os.path.join(spack.paths.test_path, "data")
+
+pytestmark = pytest.mark.skip(reason="build_systems module is moved out of spack")
 
 
 @pytest.fixture()
@@ -216,7 +216,8 @@ class TestAutotoolsPackage:
 
     @pytest.mark.disable_clean_stage_check
     @pytest.mark.skipif(
-        str(archspec.cpu.host().family) != "x86_64", reason="test data is specific for x86_64"
+        str(_vendoring.archspec.cpu.host().family) != "x86_64",
+        reason="test data is specific for x86_64",
     )
     def test_autotools_gnuconfig_replacement_no_gnuconfig(self, mutable_database, monkeypatch):
         """
@@ -403,8 +404,8 @@ def test_autoreconf_search_path_args_multiple(default_mock_concretization, tmpdi
     aclocal_fst = str(tmpdir.mkdir("fst").mkdir("share").mkdir("aclocal"))
     aclocal_snd = str(tmpdir.mkdir("snd").mkdir("share").mkdir("aclocal"))
     build_dep_one, build_dep_two = spec.dependencies(deptype="build")
-    build_dep_one.prefix = str(tmpdir.join("fst"))
-    build_dep_two.prefix = str(tmpdir.join("snd"))
+    build_dep_one.set_prefix(str(tmpdir.join("fst")))
+    build_dep_two.set_prefix(str(tmpdir.join("snd")))
     assert spack.build_systems.autotools._autoreconf_search_path_args(spec) == [
         "-I",
         aclocal_fst,
@@ -422,8 +423,8 @@ def test_autoreconf_search_path_args_skip_automake(default_mock_concretization, 
     aclocal_snd = str(tmpdir.mkdir("snd").mkdir("share").mkdir("aclocal"))
     build_dep_one, build_dep_two = spec.dependencies(deptype="build")
     build_dep_one.name = "automake"
-    build_dep_one.prefix = str(tmpdir.join("fst"))
-    build_dep_two.prefix = str(tmpdir.join("snd"))
+    build_dep_one.set_prefix(str(tmpdir.join("fst")))
+    build_dep_two.set_prefix(str(tmpdir.join("snd")))
     assert spack.build_systems.autotools._autoreconf_search_path_args(spec) == ["-I", aclocal_snd]
 
 
@@ -434,7 +435,7 @@ def test_autoreconf_search_path_args_external_order(default_mock_concretization,
     aclocal_snd = str(tmpdir.mkdir("snd").mkdir("share").mkdir("aclocal"))
     build_dep_one, build_dep_two = spec.dependencies(deptype="build")
     build_dep_one.external_path = str(tmpdir.join("fst"))
-    build_dep_two.prefix = str(tmpdir.join("snd"))
+    build_dep_two.set_prefix(str(tmpdir.join("snd")))
     assert spack.build_systems.autotools._autoreconf_search_path_args(spec) == [
         "-I",
         aclocal_snd,
@@ -447,8 +448,8 @@ def test_autoreconf_search_path_skip_nonexisting(default_mock_concretization, tm
     """Skip -I flags for non-existing directories"""
     spec = default_mock_concretization("dttop")
     build_dep_one, build_dep_two = spec.dependencies(deptype="build")
-    build_dep_one.prefix = str(tmpdir.join("fst"))
-    build_dep_two.prefix = str(tmpdir.join("snd"))
+    build_dep_one.set_prefix(str(tmpdir.join("fst")))
+    build_dep_two.set_prefix(str(tmpdir.join("snd")))
     assert spack.build_systems.autotools._autoreconf_search_path_args(spec) == []
 
 
