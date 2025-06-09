@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path, PurePath
 from typing import Callable, Dict, List, Optional, Sequence, TextIO, Type, Union, overload
+import threading
 
 from _vendoring.typing_extensions import Literal
 
@@ -15,6 +16,7 @@ import llnl.util.tty as tty
 
 import spack.error
 from spack.util.environment import EnvironmentModifications
+from spack.util.download_watcher import watcher
 
 __all__ = ["Executable", "which", "which_string", "ProcessError"]
 
@@ -141,6 +143,7 @@ class Executable:
         output: Union[Optional[TextIO], str, Type[str], Callable] = None,
         error: Union[Optional[TextIO], str, Type[str], Callable] = None,
         _dump_env: Optional[Dict[str, str]] = None,
+        download_path: Optional[str] = None,
     ) -> Optional[str]:
         """Runs this executable in a subprocess.
 
@@ -273,6 +276,26 @@ class Executable:
                 env=current_environment,
                 close_fds=False,
             )
+
+            print(f"AAL: proc.pid: {proc.pid}")
+            executable_name = os.path.basename(self.exe[0]) if self.exe else "unknown"
+            print(f"AAL: executable: {executable_name}")
+            print(f"AAL: full_command: {cmd_line_string}")
+            print(f"AAL: download_path: {download_path}")
+            print(f"AAL: os.path.exists(download_path): {os.path.exists(download_path)}")
+
+
+            # AAL: downloads watcher thread
+            watcher_thread = None
+            if download_path: 
+                print(f"AAL: started watcher thread")
+                watcher_thread = threading.Thread(
+                    target=watcher,
+                    args=(proc.pid, download_path, 20),
+                    daemon=True
+                )
+                watcher_thread.start()
+
             out, err = proc.communicate(timeout=timeout)
 
             result = process_cmd_output(out, err)

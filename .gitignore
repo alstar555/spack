@@ -8,6 +8,7 @@
 /var/spack/repos/*/index.yaml
 /var/spack/repos/*/lock
 /opt
+test-mirror/
 # Ignore everything in /etc/spack except /etc/spack/defaults
 /etc/spack/*
 !/etc/spack/defaults
