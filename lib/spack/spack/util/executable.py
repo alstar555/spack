@@ -6,8 +6,11 @@ import os
 import re
 import subprocess
 import sys
+import select
 from pathlib import Path, PurePath
 from typing import Callable, Dict, List, Optional, Sequence, TextIO, Type, Union, overload
+import threading
+import time
 
 from _vendoring.typing_extensions import Literal
 
@@ -15,6 +18,8 @@ import llnl.util.tty as tty
 
 import spack.error
 from spack.util.environment import EnvironmentModifications
+from spack.util.download_watcher import watcher
+from spack.util.download_watcher import download_watcher_communicate
 
 __all__ = ["Executable", "which", "which_string", "ProcessError"]
 
@@ -141,6 +146,7 @@ class Executable:
         output: Union[Optional[TextIO], str, Type[str], Callable] = None,
         error: Union[Optional[TextIO], str, Type[str], Callable] = None,
         _dump_env: Optional[Dict[str, str]] = None,
+        download_path: Optional[str] = None,
     ) -> Optional[str]:
         """Runs this executable in a subprocess.
 
@@ -273,7 +279,32 @@ class Executable:
                 env=current_environment,
                 close_fds=False,
             )
-            out, err = proc.communicate(timeout=timeout)
+
+            print(f"AAL: proc.pid: {proc.pid}")
+            executable_name = os.path.basename(self.exe[0]) if self.exe else "unknown"
+            print(f"AAL: executable: {executable_name}")
+            print(f"AAL: full_command: {cmd_line_string}")
+            print(f"AAL: download_path: {download_path}")
+            
+            # AAL: downloads watcher thread
+            # watcher_thread = None
+            # if download_path: 
+            #     print(f"AAL: started watcher thread")
+            #     watcher_thread = threading.Thread(
+            #         target=watcher,
+            #         args=(proc.pid, download_path, 120),
+            #         daemon=True
+            #     )
+            #     watcher_thread.start()
+            
+            # Only monitor downloads
+            if download_path: 
+                watcher_timeout = 20
+                out, err = download_watcher_communicate(proc, watcher_timeout)
+            else:
+                out, err = proc.communicate(timeout=timeout)
+            
+            # out, err = proc.communicate(timeout=timeout)
 
             result = process_cmd_output(out, err)
             rc = self.returncode = proc.returncode
