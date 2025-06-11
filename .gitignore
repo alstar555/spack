@@ -6,6 +6,7 @@
 /var/spack/cache
 /var/spack/environments
 /opt
+test-mirror/
 # Ignore everything in /etc/spack except /etc/spack/defaults
 /etc/spack/*
 !/etc/spack/defaults

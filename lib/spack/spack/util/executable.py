@@ -10,7 +10,6 @@ import select
 from pathlib import Path, PurePath
 from typing import Callable, Dict, List, Optional, Sequence, TextIO, Type, Union, overload
 import threading
-import time
 
 from _vendoring.typing_extensions import Literal
 
