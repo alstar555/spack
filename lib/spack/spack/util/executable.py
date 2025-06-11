@@ -282,16 +282,16 @@ class Executable:
             print(f"AAL: executable: {executable_name}")
             print(f"AAL: full_command: {cmd_line_string}")
             print(f"AAL: download_path: {download_path}")
-            print(f"AAL: os.path.exists(download_path): {os.path.exists(download_path)}")
 
 
-            # AAL: downloads watcher thread
+            # AAL: Downloads watcher thread
             watcher_thread = None
+            watcher_timeout = 120
             if download_path: 
                 print(f"AAL: started watcher thread")
                 watcher_thread = threading.Thread(
                     target=watcher,
-                    args=(proc.pid, download_path, 20),
+                    args=(proc.pid, download_path, watcher_timeout),
                     daemon=True
                 )
                 watcher_thread.start()

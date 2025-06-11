@@ -15,22 +15,24 @@ def watcher(pid: int, download_path:str, timeout:int):
 
     Args:
         pid (int): Process ID of the download process.
-        download_path (str): Directory path where files are being downloaded.
+        download_path (str): Directory path where files are downloaded.
         timeout (int): Seconds of inactivity before considering the download stalled.
     """
     print(f"AAL: [Watcher] Monitoring: {download_path} (timeout = {timeout}s)")
+    start_time = time.time()
+
+    # Wait for the directory to appear
+    while not os.path.exists(download_path):
+        if time.time() - start_time > timeout:
+            print(f"AAL: [Watcher] download_path never appeared: {download_path}")
+            try:
+                os.kill(pid, signal.SIGKILL)
+                print(f"[Watcher] Killed process {pid} due to missing download path")
+            except ProcessLookupError:
+                print(f"[Watcher] Process {pid} already exited")
+            return
+
     last_seen = time.time()
-
-    # Wait up to 60 seconds for the directory to appear
-    for _ in range(20):
-        if os.path.exists(download_path):
-            print("[Watcher] download_path appeared")
-            break
-        time.sleep(3)
-    else:
-        print(f"[Watcher] download_path never appeared: {download_path}")
-        return
-
     try:
         while True:
             now = time.time()
@@ -43,7 +45,7 @@ def watcher(pid: int, download_path:str, timeout:int):
                         try:
                             mtime = os.path.getmtime(path)
                             if now - mtime <= timeout:
-                                # Recent modification found, reset and sleep
+                                # Download is active 
                                 recent_activity_found = True
                                 break
                         except FileNotFoundError:
@@ -57,6 +59,7 @@ def watcher(pid: int, download_path:str, timeout:int):
                 print(f"[Watcher] No recent file activity. Killing process {pid}")
                 try:
                     os.kill(pid, signal.SIGKILL)
+                    print(f"AAL: KILLED PROCESS: {pid}")
                 except ProcessLookupError:
                     print(f"[Watcher] Process {pid} already exited")
                 return

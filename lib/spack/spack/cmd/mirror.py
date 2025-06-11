@@ -643,7 +643,7 @@ def mirror_create(args):
         mirror_specs,
         path=path,
         skip_unstable_versions=args.skip_unstable_versions,
-        threads=args.jobs,
+        workers=args.jobs,
     )
 
 
@@ -665,29 +665,21 @@ def _specs_and_action(args):
 
 
 def create_mirror_for_one_spec(candidate, mirror_cache, path):
-
-    # AAL: Start watchdog
-    # package_dir = os.path.join(path, candidate.name)
-    # watchdog_thread = threading.Thread(
-    #     target=spack.mirrors.utils.watchdog_directory,
-    #     args=(os.getpid(), path, 20, 10),
-    #     daemon=True
-    # )
-    # watchdog_thread.start()
-
     pkg_cls = spack.repo.PATH.get_pkg_class(candidate.name)
     pkg_obj = pkg_cls(spack.spec.Spec(candidate))
     mirror_stats = spack.mirrors.utils.cache_single_package(pkg_obj, mirror_cache)
     return mirror_stats
 
 
-def create_mirror_for_all_specs(mirror_specs, path, skip_unstable_versions, threads):
+def create_mirror_for_all_specs(mirror_specs, path, skip_unstable_versions, workers):
     mirror_cache, mirror_stats = spack.mirrors.utils.mirror_cache_and_stats(
         path, skip_unstable_versions=skip_unstable_versions
     )
-    print("AAL: in create_mirror_for_all_specs threads:", threads)
+    print("AAL: in create_mirror_for_all_specs workers:", workers)
+    workers = 1 # AAL DEBUG set workers not parallel for now
 
-    with spack.util.parallel.make_concurrent_executor(jobs=threads) as executor:
+    with spack.util.parallel.make_concurrent_executor(jobs=workers) as executor:
+        print("AAL: executor type:", type(executor)) # executor is "concurrent.futures.process.ProcessPoolExecutor"
         # Submit tasks to the thread pool
         futures = [
             executor.submit(create_mirror_for_one_spec, candidate, mirror_cache, path)
@@ -702,7 +694,7 @@ def create_mirror_for_all_specs(mirror_specs, path, skip_unstable_versions, thre
     process_mirror_stats(*mirror_stats.stats())
 
 
-def create_mirror_for_individual_specs(mirror_specs, path, skip_unstable_versions, threads):
+def create_mirror_for_individual_specs(mirror_specs, path, skip_unstable_versions, workers):
     present, mirrored, error = spack.mirrors.utils.create(
         path, mirror_specs, skip_unstable_versions
     )
