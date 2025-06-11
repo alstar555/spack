@@ -677,7 +677,7 @@ def create_mirror_for_all_specs(mirror_specs, path, skip_unstable_versions, work
         path, skip_unstable_versions=skip_unstable_versions
     )
     print("AAL: in create_mirror_for_all_specs workers:", workers)
-    workers = 1 # AAL DEBUG set workers not parallel for now
+    # workers = 1 # AAL DEBUG set workers not parallel for now
 
     with spack.util.parallel.make_concurrent_executor(jobs=workers) as executor:
         print("AAL: executor type:", type(executor)) # executor is "concurrent.futures.process.ProcessPoolExecutor"

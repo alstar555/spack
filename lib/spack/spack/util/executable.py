@@ -299,7 +299,7 @@ class Executable:
             # Only monitor downloads
             if download_path: 
                 watcher_timeout = 20
-                out, err = download_watcher_communicate(proc, watcher_timeout)
+                out, err = download_watcher_communicate(proc, download_path, watcher_timeout)
             else:
                 out, err = proc.communicate(timeout=timeout)
             
