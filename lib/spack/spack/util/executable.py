@@ -146,6 +146,7 @@ class Executable:
         error: Union[Optional[TextIO], str, Type[str], Callable] = None,
         _dump_env: Optional[Dict[str, str]] = None,
         download_path: Optional[str] = None,
+        watcher_timeout: Optional[int] = None,
     ) -> Optional[str]:
         """Runs this executable in a subprocess.
 
@@ -278,33 +279,13 @@ class Executable:
                 env=current_environment,
                 close_fds=False,
             )
-
-            print(f"AAL: proc.pid: {proc.pid}")
-            executable_name = os.path.basename(self.exe[0]) if self.exe else "unknown"
-            print(f"AAL: executable: {executable_name}")
-            print(f"AAL: full_command: {cmd_line_string}")
-            print(f"AAL: download_path: {download_path}")
             
-            # AAL: downloads watcher thread
-            # watcher_thread = None
-            # if download_path: 
-            #     print(f"AAL: started watcher thread")
-            #     watcher_thread = threading.Thread(
-            #         target=watcher,
-            #         args=(proc.pid, download_path, 120),
-            #         daemon=True
-            #     )
-            #     watcher_thread.start()
-            
-            # Only monitor downloads
-            if download_path: 
-                watcher_timeout = 20
+            # Monitor for stalled downloads
+            if download_path and watcher_timeout: 
                 out, err = download_watcher_communicate(proc, download_path, watcher_timeout)
             else:
                 out, err = proc.communicate(timeout=timeout)
             
-            # out, err = proc.communicate(timeout=timeout)
-
             result = process_cmd_output(out, err)
             rc = self.returncode = proc.returncode
             if fail_on_error and rc != 0 and (rc not in ignore_errors):

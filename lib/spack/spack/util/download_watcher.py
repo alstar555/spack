@@ -9,130 +9,74 @@ import time
 import threading
 
 
-def download_watcher_communicate(proc, download_path, watcher_timeout):
-    """Monitor download stage directory activity to detect stalled downloads.
-    Kills download processes that show no file activity in their staging 
-    directory for longer than watcher_timeout seconds."""
+def download_watcher_communicate(proc: Popen, download_path: str, watcher_timeout: float) -> Tuple[str, str]:
+    """
+    Monitor download stage directory activity to detect stalled downloads.
+    Kills the process if no files in the stage download directory
+    have been modified within the last `watcher_timeout` seconds.
+
+    Args:
+        proc (subprocess.Popen): The subprocess to monitor.
+        download_path (str): Path to the directory being watched for activity.
+        watcher_timeout (float): Maximum seconds to wait for file activity before killing the process.
+
+    Returns:
+        Tuple[str, str]: The output and error from the process.
+    """
 
     print(f"AAL: [Watcher] In download_watcher_communicate")
 
-    last_activity = time.time()
+
+    while not os.path.isdir(download_path) and proc.poll() is None:
+        time.sleep(5)
+        print(f"AAL: [Watcher] Still waiting for {download_path}...")
+
+    last_activity = None
 
     while proc.poll() is None:
         activity_found = False
         for root, _, files in os.walk(download_path):
+            print(f"AAL: [Watcher] Scanning directory: {root} with {len(files)} files in dir {download_path}")
             for f in files:
                 path = os.path.join(root, f)
-                mtime = os.path.getmtime(path)
-                 # Break early if file was modified recently
-                if now - mtime <= watcher_timeout:
-                    last_activity = mtime
-                    activity_found = True
-                    break
+                try:
+                    mtime = os.path.getmtime(path)
+                    time_since_modified = time.time() - mtime
+                    print(f"AAL: [Watcher] File last modified {time_since_modified} sec ago")
+
+                    # Update last_activity to most recent mtime
+                    if last_activity is None or mtime > last_activity:
+                        last_activity = mtime
+
+                    # Break early if file was modified recently
+                    if time_since_modified <= watcher_timeout:
+                        print(f"AAL: [Watcher] Time file last modified: {time_since_modified} seconds ago")
+                        last_activity = mtime
+                        activity_found = True
+                        break
+                except FileNotFoundError:
+                    print(f"AAL: [Watcher] File was not found") 
             if activity_found:
                 break
 
-        if time.time() - last_activity >= watcher_timeout:
-            print(f"AAL: [Watcher] Killing stalled download process {proc.pid}")
+        if last_activity is None:
+            print("AAL: [Watcher] No activity detected yet")
+            continue
+
+        time_since_modified = time.time() - last_activity
+        print(f"AAL: [Watcher] time_since_modified: {time_since_modified}") 
+        if time_since_modified >= watcher_timeout:
             try:
+                print(f"AAL: [Watcher] Killing stalled download process {proc.pid}")
                 proc.kill()
             except ProcessLookupError:
-                print(f"AAL: [Watcher] Process {proc.pid} already exited")
+                print(f"AAL: [Watcher] ProcessLookupError: Process {proc.pid} already exited")
             break
+
+        # Check every 5 seconds
+        print(f"AAL: [Watcher] Check every 5 sec")
         time.sleep(5)
 
+    print(f"AAL: [Watcher] Download Watcher Finished, Process Ended")
     out, err = proc.communicate()
     return out, err
-
-
-def download_watcher_communicate2(proc, watcher_timeout):
-    """Simply time out process for running too long."""
-
-    print(f"AAL: [Watcher] In download_watcher_communicate")
-
-    last_active = time.time()
-
-    while proc.poll() is None:
-
-        # Check stdout activity
-        # try:
-        #     ready, _, _ = select.select([proc.stdout, proc.stderr], [], [], 1.0)
-        #     if ready:
-        #         # The download has output and therfore isn't stalled
-        #         last_active = time.time()
-        #         print(f"AAL: [Watcher] The download has stdout and therfore isn't stalled")
-        #     else:
-        #         print(f"AAL: [Watcher] No stdout")
-        # except Exception:
-        #     print(f"AAL: [Watcher] Select failed")
-        #     time.sleep(1)
-
-        if time.time() - last_active >= watcher_timeout:
-            print(f"AAL: [Watcher] Killing stalled download process {proc.pid}")
-            proc.kill()
-            break
-        time.sleep(5)
-
-    out, err = proc.communicate()
-    return out, err
-
-def watcher(pid: int, download_path:str, timeout:int):
-    """
-    Monitors the download path for activity. If the directory hasn't been updated
-    in `timeout` seconds, the download is assumed to be stalled, and the process
-    is killed to free up resources for Spack's parallel downloader.
-
-    Args:
-        pid (int): Process ID of the download process.
-        download_path (str): Directory path where files are downloaded.
-        timeout (int): Seconds of inactivity before considering the download stalled.
-    """
-    print(f"AAL: [Watcher] Monitoring: {download_path} (timeout = {timeout}s)")
-    start_time = time.time()
-
-    # Wait for the directory to appear
-    while not os.path.exists(download_path):
-        if time.time() - start_time > timeout:
-            print(f"AAL: [Watcher] download_path never appeared: {download_path}")
-            try:
-                os.kill(pid, signal.SIGKILL)
-                print(f"[Watcher] Killed process {pid} due to missing download path")
-            except ProcessLookupError:
-                print(f"[Watcher] Process {pid} already exited")
-            return
-
-    last_seen = time.time()
-    try:
-        while True:
-            now = time.time()
-            recent_activity_found = False
-
-            try:
-                for root, _, files in os.walk(download_path):
-                    for f in files:
-                        path = os.path.join(root, f)
-                        try:
-                            mtime = os.path.getmtime(path)
-                            if now - mtime <= timeout:
-                                # Download is active 
-                                recent_activity_found = True
-                                break
-                        except FileNotFoundError:
-                            continue 
-                    if recent_activity_found:
-                        break
-            except Exception as e:
-                print(f"[Watcher] Error walking directory: {e}")
-
-            if not recent_activity_found:
-                print(f"[Watcher] No recent file activity. Killing process {pid}")
-                try:
-                    os.kill(pid, signal.SIGKILL)
-                    print(f"AAL: KILLED PROCESS: {pid}")
-                except ProcessLookupError:
-                    print(f"[Watcher] Process {pid} already exited")
-                return
-            # Check every 5 seconds
-            time.sleep(5)
-    except Exception as e:
-        print(f"[Watcher] Crashed: {e}")

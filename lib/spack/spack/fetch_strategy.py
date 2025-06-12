@@ -497,8 +497,10 @@ class URLFetchStrategy(FetchStrategy):
 
         # Run curl but grab the mime type from the http headers
         curl = self.curl
+        filename = partial_file or save_file
+        dest = os.path.join(self.stage.path, filename) if filename else None
         with working_dir(self.stage.path):
-            headers = curl(*curl_args, output=str, fail_on_error=False, download_path=download_path) #AAL added download path
+            headers = curl(*curl_args, output=str, fail_on_error=False, download_path=dest) #AAL added download path
 
         if curl.returncode != 0:
             # clean up archive on failure.
@@ -938,7 +940,6 @@ class GitFetchStrategy(VCSFetchStrategy):
             clone_args.append("--quiet")
         clone_args.extend([self.url, dest])
         git(*clone_args, download_path=dest)
-        git(*clone_args, download_path=dest)
 
     def _clone_src(self) -> None:
         """Clone a repository to a path using git."""
@@ -957,7 +958,6 @@ class GitFetchStrategy(VCSFetchStrategy):
                 clone_args.insert(1, "--quiet")
             with temp_cwd():
                 git(*clone_args, download_path=dest)
-                git(*clone_args, download_path=dest)
                 repo_name = get_single_file(".")
                 if self.stage:
                     self.stage.srcdir = repo_name
@@ -972,7 +972,6 @@ class GitFetchStrategy(VCSFetchStrategy):
                 checkout_args = ["checkout", self.commit]
                 if not debug:
                     checkout_args.insert(1, "--quiet")
-                git(*checkout_args, download_path=dest)
                 git(*checkout_args, download_path=dest)
 
         else:
@@ -1007,7 +1006,6 @@ class GitFetchStrategy(VCSFetchStrategy):
 
                 args.extend([self.url])
                 git(*args, download_path=dest)
-                git(*args, download_path=dest)
 
                 repo_name = get_single_file(".")
                 if self.stage:
@@ -1029,9 +1027,7 @@ class GitFetchStrategy(VCSFetchStrategy):
                         co_args.insert(1, "--quiet")
 
                     git(*pull_args, ignore_errors=1, download_path=dest)
-                    git(*co_args, download_path=dest)
-                    git(*pull_args, ignore_errors=1, download_path=dest)
-                    git(*co_args, download_path=dest)
+                    git(*co_args, download_path=dest)          
 
     def _sparse_clone_src(self, **kwargs):
         """Use git's sparse checkout feature to clone portions of a git repository"""
@@ -1099,8 +1095,6 @@ class GitFetchStrategy(VCSFetchStrategy):
                 shutil.move(repo_name, dest)
 
             with working_dir(dest):
-                git(*sparse_args, download_path=dest)
-                git(*checkout_args, download_path=dest)
                 git(*sparse_args, download_path=dest)
                 git(*checkout_args, download_path=dest)
 
@@ -1339,7 +1333,7 @@ class SvnFetchStrategy(VCSFetchStrategy):
         args.extend([self.url])
 
         with temp_cwd():
-            self.svn(*args)
+            self.svn(*args, download_path=self.stage.source_path)
             repo_name = get_single_file(".")
             self.stage.srcdir = repo_name
             shutil.move(repo_name, self.stage.source_path)
