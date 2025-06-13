@@ -5,11 +5,13 @@
 import os
 import signal
 import select
+from subprocess import Popen
+from typing import Tuple
 import time
 import threading
 
 
-def download_watcher_communicate(proc: Popen, download_path: str, watcher_timeout: float) -> Tuple[str, str]:
+def download_watcher_communicate(proc: Popen, download_path: str, watcher_timeout:int) -> Tuple[str, str]:
     """
     Monitor download stage directory activity to detect stalled downloads.
     Kills the process if no files in the stage download directory
@@ -18,7 +20,7 @@ def download_watcher_communicate(proc: Popen, download_path: str, watcher_timeou
     Args:
         proc (subprocess.Popen): The subprocess to monitor.
         download_path (str): Path to the directory being watched for activity.
-        watcher_timeout (float): Maximum seconds to wait for file activity before killing the process.
+        watcher_timeout (int): Timeout in seconds for watchdog process monitoring downloads
 
     Returns:
         Tuple[str, str]: The output and error from the process.

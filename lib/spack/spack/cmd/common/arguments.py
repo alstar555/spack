@@ -395,6 +395,16 @@ def jobs():
 
 
 @arg
+def watcher_timeout():
+    return Args(
+        "-w",
+        "--watcher-timeout",
+        type=int,
+        dest="watcher_timeout",
+        help="timeout in seconds for watchdog process monitoring downloads",
+    )
+
+@arg
 def concurrent_packages():
     return Args(
         "-p",

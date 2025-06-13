@@ -17,7 +17,6 @@ import llnl.util.tty as tty
 
 import spack.error
 from spack.util.environment import EnvironmentModifications
-from spack.util.download_watcher import watcher
 from spack.util.download_watcher import download_watcher_communicate
 
 __all__ = ["Executable", "which", "which_string", "ProcessError"]
@@ -146,7 +145,6 @@ class Executable:
         error: Union[Optional[TextIO], str, Type[str], Callable] = None,
         _dump_env: Optional[Dict[str, str]] = None,
         download_path: Optional[str] = None,
-        watcher_timeout: Optional[int] = None,
     ) -> Optional[str]:
         """Runs this executable in a subprocess.
 
@@ -281,6 +279,7 @@ class Executable:
             )
             
             # Monitor for stalled downloads
+            watcher_timeout = spack.config.get("config:watcher_timeout", None)
             if download_path and watcher_timeout: 
                 out, err = download_watcher_communicate(proc, download_path, watcher_timeout)
             else:

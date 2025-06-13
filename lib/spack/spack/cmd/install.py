@@ -86,6 +86,7 @@ def setup_parser(subparser: argparse.ArgumentParser) -> None:
     )
     arguments.add_common_arguments(subparser, ["concurrent_packages"])
     arguments.add_common_arguments(subparser, ["jobs"])
+    arguments.add_common_arguments(subparser, ["watcher_timeout"])
     subparser.add_argument(
         "--overwrite",
         action="store_true",

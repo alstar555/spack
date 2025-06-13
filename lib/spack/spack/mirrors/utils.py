@@ -5,6 +5,7 @@ import os
 import traceback
 import multiprocessing
 import time
+from typing import Optional
 import signal
 
 import llnl.util.tty as tty

@@ -81,7 +81,7 @@ def setup_parser(subparser: argparse.ArgumentParser) -> None:
     )
     arguments.add_common_arguments(create_parser, ["specs"])
     arguments.add_common_arguments(create_parser, ["jobs"])
-    arguments.add_concretizer_args(create_parser)
+    arguments.add_common_arguments(create_parser, ["watcher_timeout"])
 
     # Destroy
     destroy_parser = sp.add_parser("destroy", help=mirror_destroy.__doc__)
@@ -618,6 +618,9 @@ def mirror_create(args):
             "cannot specify specs with a file if you chose to mirror all specs with '--all'"
         )
 
+    if args.watcher_timeout:
+        spack.config.set("config:watcher_timeout", args.watcher_timeout, scope="command_line")
+
     if args.file and args.specs:
         raise SpackError("cannot specify specs with a file AND on command line")
 
@@ -677,7 +680,6 @@ def create_mirror_for_all_specs(mirror_specs, path, skip_unstable_versions, work
         path, skip_unstable_versions=skip_unstable_versions
     )
     print("AAL: in create_mirror_for_all_specs workers:", workers)
-    # workers = 1 # AAL DEBUG set workers not parallel for now
 
     with spack.util.parallel.make_concurrent_executor(jobs=workers) as executor:
         print("AAL: executor type:", type(executor)) # executor is "concurrent.futures.process.ProcessPoolExecutor"
