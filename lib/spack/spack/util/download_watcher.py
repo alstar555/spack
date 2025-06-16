@@ -33,8 +33,11 @@ def download_watcher_communicate(proc: Popen, download_path: str, watcher_timeou
     while proc.poll() is None:
         # Waiting for initial directory to create
         if not os.path.isdir(download_path):
-            time.sleep(5)
+            time.sleep(1)
             continue
+        else:
+            print(f"AAL: [Watcher] Directory created")
+
             
         activity_found = False
         for root, _, files in os.walk(download_path):
