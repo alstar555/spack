@@ -28,14 +28,14 @@ def download_watcher_communicate(proc: Popen, download_path: str, watcher_timeou
 
     print(f"AAL: [Watcher] In download_watcher_communicate")
 
-
-    while not os.path.isdir(download_path) and proc.poll() is None:
-        time.sleep(5)
-        print(f"AAL: [Watcher] Still waiting for {download_path}...")
-
     last_activity = None
 
     while proc.poll() is None:
+        # Waiting for initial directory to create
+        if not os.path.isdir(download_path):
+            time.sleep(5)
+            continue
+            
         activity_found = False
         for root, _, files in os.walk(download_path):
             print(f"AAL: [Watcher] Scanning directory: {root} with {len(files)} files in dir {download_path}")
@@ -62,7 +62,8 @@ def download_watcher_communicate(proc: Popen, download_path: str, watcher_timeou
                 break
 
         if last_activity is None:
-            print("AAL: [Watcher] No activity detected yet")
+            # No activity detected yet
+            # print("AAL: [Watcher] No activity detected yet")
             continue
 
         time_since_modified = time.time() - last_activity
