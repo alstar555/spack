@@ -13,9 +13,9 @@ import threading
 
 def download_watcher_communicate(proc: Popen, download_path: str, watcher_timeout:int) -> Tuple[str, str]:
     """
-    Monitor download stage directory activity to detect stalled downloads.
-    Kills the process if no files in the stage download directory
-    have been modified within the last `watcher_timeout` seconds.
+    Monitor download stage directory activity to detect stalled downloads. Kills the process if no
+    files in the stage download directory have been modified within the last `watcher_timeout`
+    seconds.
 
     Args:
         proc (subprocess.Popen): The subprocess to monitor.
@@ -31,19 +31,18 @@ def download_watcher_communicate(proc: Popen, download_path: str, watcher_timeou
     last_activity = None
 
     while proc.poll() is None:
-        # Waiting for initial directory to create
-        if not os.path.isdir(download_path):
-            time.sleep(1)
-            continue
-        else:
-            print(f"AAL: [Watcher] Directory created")
-
-            
         activity_found = False
-        for root, _, files in os.walk(download_path):
+
+        # Wait for the download directory to be created
+        if not os.path.exists(download_path):
+            print(f"[Watcher] Waiting for {download_path} to be created...")
+            time.sleep(5)
+            continue
+
+        for root, dirs, files in os.walk(download_path):
             print(f"AAL: [Watcher] Scanning directory: {root} with {len(files)} files in dir {download_path}")
-            for f in files:
-                path = os.path.join(root, f)
+            paths = [root] + [os.path.join(root, n) for n in dirs + files]
+            for path in paths:
                 try:
                     mtime = os.path.getmtime(path)
                     time_since_modified = time.time() - mtime
@@ -60,7 +59,7 @@ def download_watcher_communicate(proc: Popen, download_path: str, watcher_timeou
                         activity_found = True
                         break
                 except FileNotFoundError:
-                    print(f"AAL: [Watcher] File was not found") 
+                    print(f"AAL: [Watcher] File was not found")
             if activity_found:
                 break
 
